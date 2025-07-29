@@ -1,22 +1,52 @@
 version: "3.8"
-
 services:
-  web:
-    build: ./app
-    ports:
-      - "5000:5000"
-    depends_on:
-      - db
-
-  db:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_DATABASE: flaskdb
-    volumes:
+   mysql: 
+     user: "${UID}:${GID}" 
+     image: mysql:8.0
+     container_name: mysql
+     environment:
+       MYSQL_ROOT_PASSWORD: root
+       MYSQL_DATABASE: devops
+       MYSQL_USER: admin
+       MYSQL_PASSWORD: admin
+     volumes:
       - db_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
+     networks:
+       - custom
+     healthcheck:
+        test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+        start_period: 60s
+       
+   web:
+     image: skm4356/flaskapp:latest
+     container_name: flask
+     ports:
+      - "5000:5000"
+     environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+      MYSQL_DB: devops
+    depends_on:
+      - mysql
+    networks:
+      - custom
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
+networks:
+  custom
+     networks:
+       custom
+      
+    
 volumes:
   db_data:
